@@ -23,7 +23,7 @@ describe('input', () => {
         },
       ],
     };
-    input._processInput(given, thenTest);
+    input.processInput(given, thenTest);
 
     function thenTest(result) {
       expect(result).toEqual(expected);
@@ -36,7 +36,7 @@ describe('input', () => {
     expect(failProcessInput).toThrow();
 
     function failProcessInput() {
-      input._processInput('given', thenTest);
+      input.processInput('given', thenTest);
     }
 
     function thenTest(data) {

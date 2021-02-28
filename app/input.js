@@ -1,29 +1,19 @@
 const fs = require('fs');
+const inquirer = require('inquirer');
+const minimist = require('minimist');
 
 const Map = require('./map');
 const Rover = require('./rover');
 const DIRECTIONS = require('./constants/directions').in;
 const MOVES = require('./constants/moves').in;
 
-/**
- * Process the input text file and reject on error
- * @returns {*|promise}
- */
-function getInput() {
-  return new Promise((resolve, reject) => {
-    fs.readFile('./input.txt', 'utf8', (error, data) => {
-      if (error) {
-        reject();
-      } else {
-        try {
-          const roverInfo = processInput(data);
-          resolve(roverInfo);
-        } catch (e) {
-          reject(e);
-        }
-      }
-    });
+function transformCMDAnswersToFileFormat(data) {
+  let str = `${data[0].plateau_size}\n`;
+  data.forEach((item) => {
+    str += (`${item.landing}\n`);
+    str += (`${item.instructions}\n`);
   });
+  return str;
 }
 
 function setupMap(line) {
@@ -79,7 +69,89 @@ function processInput(data) {
   };
 }
 
+function getCMDInput() {
+  return new Promise((resolve, reject) => {
+    const output = [];
+    let isInitialPrompt = true;
+    const questions = [
+      {
+        type: 'input',
+        name: 'plateau_size',
+        message: "What's your Plateau size",
+        default: '5 5',
+        when() {
+          return isInitialPrompt;
+        },
+      },
+      {
+        type: 'input',
+        name: 'landing',
+        message: 'Rover Landing Coordinages',
+        default: '1 2 N',
+      },
+      {
+        type: 'input',
+        name: 'instructions',
+        message: 'Rover Landing Coordinages',
+        default: 'LMLMLMLMM',
+      },
+      {
+        type: 'confirm',
+        name: 'askAgain',
+        message: 'Want to add another Rover (just hit enter for YES)?',
+        default: true,
+      },
+    ];
+
+    function ask() {
+      inquirer.prompt(questions)
+        .then((answers) => {
+          output.push(answers);
+          isInitialPrompt = false;
+          if (answers.askAgain) {
+            ask();
+          } else {
+            const str = transformCMDAnswersToFileFormat(output);
+            const info = processInput(str);
+            resolve(info);
+          }
+        })
+        .catch((err) => reject(err));
+    }
+
+    ask();
+  });
+}
+function getFileInput() {
+  return new Promise((resolve, reject) => {
+    fs.readFile('./input.txt', 'utf8', (error, data) => {
+      if (error) {
+        reject();
+      } else {
+        try {
+          const roverInfo = processInput(data);
+          resolve(roverInfo);
+        } catch (e) {
+          reject(e);
+        }
+      }
+    });
+  });
+}
+/**
+ * Process the input text file and reject on error
+ * @returns {*|promise}
+ */
+function getInput() {
+  const argv = minimist(process.argv.slice(2));
+  if (argv.source === 'file') {
+    return getFileInput();
+  }
+
+  return getCMDInput();
+}
+
 module.exports = {
   getInput,
-  _processInput: processInput,
+  processInput,
 };
